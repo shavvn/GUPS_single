@@ -11,8 +11,8 @@ using namespace std;
 /*
  * Simple single thread Gig Updates Per Second benchmark in C++
  * use g++ gups.cc -o gups to compile
- * Use argv to pass the memory size in GBs
- * e.g. ./gups 2
+ * Use argv to pass the memory size in MBs
+ * e.g. ./gups 2048
  * If no memory size specified, use 2GB by default
  **/
 
@@ -62,6 +62,9 @@ void RandomAccessUpdate(uint64_t table_size, uint64_t *table) {
     }
 
     for (uint64_t i = 0; i < num_updates / 128; i++) {
+        if (i % (1 << 20) == 0) {
+            printf("updated %lu entries\n", i);
+        }
         for (int j = 0; j < 128; j++) {
             ran[j] = (ran[j] << 1) ^ ((int64_t) ran[j] < 0 ? POLY : 0);
             table[ran[j] & (table_size - 1)] ^= ran[j];
@@ -70,14 +73,14 @@ void RandomAccessUpdate(uint64_t table_size, uint64_t *table) {
 }
 
 int main(int argc, char *argv[]) {
-    int mem_size_gb = 2;
+    int mem_size_mb = 2048;
     if (argc > 1) {
-        sscanf(argv[1], "%d", &mem_size_gb);
+        sscanf(argv[1], "%d", &mem_size_mb);
     }
    
-    printf("Memory size %d GB\n", mem_size_gb);
-    // shift 30 bits to convert GB -> B 
-    uint64_t mem_size = ((uint64_t)mem_size_gb) << 30;
+    printf("Memory size %d MB\n", mem_size_mb);
+    // shift 30 bits to convert MB -> B 
+    uint64_t mem_size = ((uint64_t)mem_size_mb) << 20;
     mem_size /= sizeof(uint64_t);
     uint64_t table_size;
 
@@ -101,8 +104,10 @@ int main(int argc, char *argv[]) {
         table[i] = i;
     }
 
+    printf("starting GUPs...\n");
     clock_t begin = clock();
     RandomAccessUpdate(table_size, table);
+    printf("finished GUPs!\n");
     clock_t end = clock();
     
     double time_secs = (double)(end - begin) / CLOCKS_PER_SEC;
